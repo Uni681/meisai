@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>明細かんたん仕分け</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --peach:#ff8fab;--peach2:#ffb3c6;--peach-bg:#fff0f3;
+  --mint:#52b788;--mint2:#95d5b2;--mint-bg:#f0faf5;
+  --lav:#c77dff;--lav-bg:#f8f0ff;
+  --sky:#4ea8de;--sky-bg:#edf6ff;
+  --orange:#ff9f1c;--orange-bg:#fff3dc;
+  --yellow:#ffbe0b;--yellow-bg:#fffbea;
+  --bg:#fff8f9;--card:#fff;
+  --text:#3d2c35;--text2:#9e8a93;--text3:#c9b8bf;
+  --border:#f5e6ea;
+  --shadow:0 4px 20px rgba(255,143,171,0.13);
+  --shadow-lg:0 8px 32px rgba(255,143,171,0.18);
+  --r:20px;--r-sm:12px;--r-xs:8px;
+  --sans:'Nunito','Noto Sans JP',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6;min-height:100vh;}
+.app{max-width:680px;margin:0 auto;padding:0 16px 40px;}
+
+/* HEADER */
+.app-header{background:linear-gradient(135deg,#ff8fab,#ffb3c6,#ffd6e0);padding:20px 20px 26px;position:relative;overflow:hidden;margin:-0px -16px 0;border-radius:0 0 28px 28px;}
+.app-header::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(255,255,255,.15);border-radius:50%;}
+.header-label{font-size:11px;font-weight:800;letter-spacing:.15em;color:rgba(255,255,255,.8);text-transform:uppercase;margin-bottom:4px;}
+.header-title{font-size:22px;font-weight:900;color:#fff;line-height:1.2;position:relative;z-index:1;}
+.header-sub{font-size:12px;color:rgba(255,255,255,.85);margin-top:4px;font-weight:600;position:relative;z-index:1;}
+
+/* STEPS */
+.steps{display:flex;gap:6px;margin:20px 0 16px;padding:0;}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s;}
+.step-dot.active{background:var(--peach);transform:scale(1.3);}
+.step-dot.done{background:var(--mint);}
+
+/* SECTION */
+.section-title{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* CARDS */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1.5px solid var(--border);padding:18px;margin-bottom:14px;}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--peach2);background:var(--peach-bg);border-radius:var(--r);padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--peach);background:#ffd6e0;}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:36px;margin-bottom:10px;}
+.upload-title{font-size:15px;font-weight:800;color:var(--peach);margin-bottom:4px;}
+.upload-sub{font-size:12px;color:var(--text2);}
+
+/* SUMMARY GRID */
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.sum-card{background:var(--card);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);border:1.5px solid var(--border);}
+.sum-card.peach{border-color:#ffd6e0;background:linear-gradient(135deg,#fff,var(--peach-bg));}
+.sum-card.mint{border-color:var(--mint2);background:linear-gradient(135deg,#fff,var(--mint-bg));}
+.sum-card.orange{border-color:#ffd6a0;background:linear-gradient(135deg,#fff,var(--orange-bg));}
+.sum-card.lav{border-color:#e2b4ff;background:linear-gradient(135deg,#fff,var(--lav-bg));}
+.sum-label{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px;}
+.sum-val{font-size:20px;font-weight:900;letter-spacing:-.02em;}
+.sum-val.pink{color:var(--peach);}
+.sum-val.green{color:var(--mint);}
+.sum-val.orange{color:var(--orange);}
+.sum-val.purple{color:var(--lav);}
+.sum-sub{font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;}
+
+/* CATEGORY CHIPS */
+.cat-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;}
+.cat-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;border:2px solid transparent;transition:all .15s;white-space:nowrap;}
+.cat-chip.selected{box-shadow:0 2px 8px rgba(0,0,0,.1);}
+
+/* TRANSACTION LIST */
+.tx-list{display:flex;flex-direction:column;gap:8px;}
+.tx-item{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;display:flex;align-items:center;gap:10px;transition:border-color .15s;}
+.tx-item.needs-review{border-color:var(--peach2);background:var(--peach-bg);}
+.tx-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.tx-info{flex:1;min-width:0;}
+.tx-name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tx-date{font-size:10px;color:var(--text2);font-weight:600;margin-top:1px;}
+.tx-amount{font-size:14px;font-weight:900;flex-shrink:0;}
+.tx-cat{margin-top:5px;}
+.cat-select{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-xs);font-size:12px;font-weight:700;font-family:var(--sans);background:var(--bg);color:var(--text);cursor:pointer;}
+.cat-select:focus{outline:none;border-color:var(--peach);}
+.review-badge{font-size:9px;font-weight:800;background:var(--peach);color:#fff;padding:2px 7px;border-radius:10px;margin-left:6px;}
+
+/* NOTION RESULT */
+.notion-block{background:var(--mint-bg);border:1.5px solid var(--mint2);border-radius:var(--r);padding:16px;margin-bottom:12px;}
+.notion-block-title{font-size:12px;font-weight:800;color:var(--mint);margin-bottom:8px;}
+.notion-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(82,183,136,.15);font-size:13px;}
+.notion-row:last-child{border:none;}
+.notion-row .k{color:var(--text2);font-weight:600;}
+.notion-row .v{font-weight:800;}
+
+/* BUTTONS */
+.btn{width:100%;padding:14px;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:var(--sans);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-primary{background:linear-gradient(135deg,var(--peach),var(--peach2));color:#fff;box-shadow:0 4px 16px rgba(255,143,171,.35);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,143,171,.4);}
+.btn-primary:active{transform:scale(.97);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-mint{background:linear-gradient(135deg,var(--mint),var(--mint2));color:#fff;box-shadow:0 4px 16px rgba(82,183,136,.3);}
+.btn-outline{background:transparent;border:2px solid var(--border);color:var(--text2);}
+.btn-sm{padding:10px 14px;font-size:13px;width:auto;border-radius:var(--r-sm);}
+
+/* LOADING */
+.loading{text-align:center;padding:32px;color:var(--text2);}
+.loading-spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--peach);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:10px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* NOTICE */
+.notice{background:var(--sky-bg);border:1.5px solid #b8d9f5;border-radius:var(--r-sm);padding:10px 14px;font-size:11px;color:var(--text2);line-height:1.7;font-weight:600;}
+.notice strong{color:var(--text);}
+
+/* PAGE */
+.page{display:none;animation:fadeIn .25s ease;}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* NOTION POST AREA */
+.notion-preview{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:16px;font-size:13px;white-space:pre-wrap;font-family:monospace;max-height:300px;overflow-y:auto;margin-bottom:12px;color:var(--text);}
+
+@media(max-width:380px){.sum-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="app-header">
+    <div class="header-label">Card Statement</div>
+    <div class="header-title">明細かんたん仕分け 🧾</div>
+    <div class="header-sub">CSVをアップして、AIが自動カテゴリ分類！</div>
+  </div>
+
+  <div style="padding-top:20px;">
+    <div class="steps" id="steps">
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+
+    <!-- STEP 1: アップロード -->
+    <div class="page active" id="page-upload">
+      <div class="section-title">STEP 1　CSVをアップロード</div>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" accept=".csv" id="csv-input" onchange="handleFile(this.files[0])">
+        <div class="upload-icon">📂</div>
+        <div class="upload-title">三井住友カードのCSVを選択</div>
+        <div class="upload-sub">タップしてファイルを選ぶ<br>または、ここにドラッグ＆ドロップ</div>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="notice">
+          <strong>📌 CSVのダウンロード方法</strong><br>
+          三井住友カード会員サイト（Vpass）→ ご利用明細 → CSV出力
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: 確認・分類 -->
+    <div class="page" id="page-review">
+      <div class="section-title">STEP 2　AIが自動分類 ＋ 確認</div>
+      <div id="review-loading" class="loading">
+        <div class="loading-spinner"></div>
+        <div>AIが明細を分類中...✨</div>
+      </div>
+      <div id="review-content" style="display:none;">
+        <div class="sum-grid" id="review-summary"></div>
+        <div class="section-title" style="margin-top:4px;">⚠️ 確認が必要な明細</div>
+        <div class="notice" style="margin-bottom:12px;"><strong>Amazonやコンビニなど曖昧な明細</strong>だけ手動でカテゴリを選んでね。他はAIが自動で分類済み！</div>
+        <div class="tx-list" id="review-list"></div>
+        <div style="margin-top:16px;" id="all-toggle">
+          <button class="btn btn-outline btn-sm" onclick="toggleAllView()" id="all-toggle-btn">📋 全件を見る ▼</button>
+        </div>
+        <div id="all-list" style="display:none;margin-top:12px;">
+          <div class="section-title">全明細一覧</div>
+          <div class="tx-list" id="all-tx-list"></div>
+        </div>
+        <div style="margin-top:20px;">
+          <button class="btn btn-primary" onclick="goToResult()">✅ これでOK！集計を見る</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: 集計・Notion投稿 -->
+    <div class="page" id="page-result">
+      <div class="section-title">STEP 3　カテゴリ別集計</div>
+      <div class="sum-grid" id="result-summary"></div>
+      <div class="section-title">カテゴリ別内訳</div>
+      <div id="category-breakdown"></div>
+      <div class="section-title" style="margin-top:4px;">Notionに投稿</div>
+      <div class="notice" style="margin-bottom:12px;"><strong>下のテキストをコピー</strong>してNotionのページに貼り付けてね。ページIDを入れると自動投稿もできる！</div>
+      <div class="notion-preview" id="notion-preview"></div>
+      <button class="btn btn-mint" onclick="copyNotion()" style="margin-bottom:10px;">📋 テキストをコピー</button>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+        <input type="text" id="notion-page-id" placeholder="NotionページID（任意）" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-family:var(--sans);background:var(--bg);color:var(--text);">
+        <button class="btn btn-primary btn-sm" onclick="postToNotion()" id="post-btn">🚀 投稿</button>
+      </div>
+      <div id="post-result" style="margin-top:10px;"></div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-outline" onclick="restart()">🔄 別のCSVを読み込む</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATEGORIES = [
+  {id:'transport',   label:'🚗 交通・移動',  color:'#4ea8de', bg:'#edf6ff', keywords:['ETC','タイムズ','GO','タクシー','PASMO','パスモ','電車','バス','JR','新幹線','飛行機','駐車']},
+  {id:'food',        label:'🍔 食費',         color:'#ff8fab', bg:'#fff0f3', keywords:['マック','マクドナルド','ファミリーマート','セブン','ローソン','デリバリー','吉野家','松屋','すき家','スタバ','コーヒー','レストラン','食堂','弁当','UberEats','出前']},
+  {id:'utility',     label:'⚡ 光熱費・通信', color:'#f5a623', bg:'#fff3dc', keywords:['電力','電気','ガス','水道','ドコモ','au','ソフトバンク','格安','通信','インターネット','ウォーター','水']},
+  {id:'shopping',    label:'🛍 ショッピング', color:'#c77dff', bg:'#f8f0ff', keywords:['ユニクロ','GU','ZARA','H&M','ルミネ','マルイ','伊勢丹','高島屋','しまむら','ABC','靴','服','アパレル']},
+  {id:'entertainment',label:'🎬 娯楽・趣味',  color:'#52b788', bg:'#f0faf5', keywords:['フールー','Hulu','Netflix','Disney','ドコモ','Spotify','Apple','Google','ゲーム','映画','カラオケ','スポーツ']},
+  {id:'medical',     label:'💊 医療・美容',   color:'#ff6b9d', bg:'#fff0f5', keywords:['薬局','ドラッグ','クリニック','病院','歯科','美容院','ネイル','エステ','マッサージ']},
+  {id:'housing',     label:'🏠 住居・生活',   color:'#95d5b2', bg:'#f0faf5', keywords:['家賃','管理費','引越','ホームセンター','ニトリ','IKEA','コジマ','ヤマダ','電器']},
+  {id:'amazon',      label:'📦 Amazon',       color:'#ff9f1c', bg:'#fff3dc', keywords:['AMAZON','アマゾン']},
+  {id:'subscription',label:'📱 サブスク',     color:'#4ea8de', bg:'#edf6ff', keywords:['FOD','Prime','サブスク','月額','年額']},
+  {id:'other',       label:'🗂 その他',       color:'#9e8a93', bg:'#f9f4f5', keywords:[]},
+];
+
+const AMBIGUOUS = ['AMAZON','アマゾン','コンビニ','ファミリーマート','セブン','ローソン','ミニストップ'];
+
+let transactions = [];
+let allShown = false;
+
+// ── ドラッグ&ドロップ ──
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+
+function setStep(n) {
+  document.querySelectorAll('.step-dot').forEach((d,i) => {
+    d.className = 'step-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+  });
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── CSV読み込み ──
+async function handleFile(file) {
+  if (!file) return;
+  const text = await readFileAsText(file);
+  const rows = parseCSV(text);
+  transactions = rows;
+  showPage('page-review');
+  setStep(1);
+  classifyWithAI(transactions);
+}
+
+function readFileAsText(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.readAsText(file, 'Shift-JIS');
+  });
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const txs = [];
+  for (const line of lines) {
+    const cols = line.split(',');
+    const dateStr = cols[0]?.trim();
+    const name = cols[1]?.trim();
+    const amountStr = cols[2]?.trim();
+    if (!dateStr || !name || !amountStr) continue;
+    if (!/^\d{4}\/\d{2}\/\d{2}$/.test(dateStr)) continue;
+    const amount = parseInt(amountStr.replace(/[^0-9]/g,''));
+    if (!amount || amount <= 0) continue;
+    // 分割払いや大きすぎる金額はスキップ（三井カード分割など）
+    if (amount > 100000) continue;
+    txs.push({ date: dateStr, name, amount, category: null, needsReview: false });
+  }
+  return txs;
+}
+
+// ── AI分類 ──
+async function classifyWithAI(txs) {
+  document.getElementById('review-loading').style.display = 'block';
+  document.getElementById('review-content').style.display = 'none';
+
+  const txList = txs.map((t,i) => `${i}: ${t.name} (${t.amount}円)`).join('\n');
+  const catList = CATEGORIES.map(c => `${c.id}: ${c.label}`).join('\n');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `以下のクレジットカード明細をカテゴリに分類してください。
+
+【カテゴリ一覧】
+${catList}
+
+【明細リスト】
+${txList}
+
+【ルール】
+- AMAZONやコンビニ（ファミリーマート、セブン、ローソン）は needsReview: true にする
+- 交通系（ETC、タイムズカー、GOタクシー、PASMO）は transport
+- 電気・ガス・水道・通信は utility
+- サブスク（フールー、FOD等）は subscription
+- その他不明なものは other
+
+必ずJSON配列のみを返してください。preambleや説明は不要。フォーマット：
+[{"index":0,"category":"transport","needsReview":false}, ...]`
+        }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content[0].text.trim();
+    const clean = text.replace(/```json|```/g,'').trim();
+    const results = JSON.parse(clean);
+    results.forEach(r => {
+      if (txs[r.index]) {
+        txs[r.index].category = r.category || 'other';
+        txs[r.index].needsReview = r.needsReview || false;
+      }
+    });
+  } catch(e) {
+    // フォールバック：キーワードマッチ
+    txs.forEach(t => {
+      t.category = guessCategory(t.name);
+      t.needsReview = AMBIGUOUS.some(a => t.name.toUpperCase().includes(a.toUpperCase()));
+    });
+  }
+
+  renderReview(txs);
+  document.getElementById('review-loading').style.display = 'none';
+  document.getElementById('review-content').style.display = 'block';
+}
+
+function guessCategory(name) {
+  const n = name.toUpperCase();
+  for (const cat of CATEGORIES) {
+    if (cat.keywords.some(k => n.includes(k.toUpperCase()))) return cat.id;
+  }
+  return 'other';
+}
+
+function getCat(id) { return CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length-1]; }
+
+// ── レビュー画面 ──
+function renderReview(txs) {
+  const total = txs.reduce((s,t)=>s+t.amount,0);
+  const needsReview = txs.filter(t=>t.needsReview);
+  const autoClassified = txs.filter(t=>!t.needsReview);
+
+  document.getElementById('review-summary').innerHTML = `
+    <div class="sum-card peach">
+      <div class="sum-label">💳 合計金額</div>
+      <div class="sum-val pink">¥${total.toLocaleString()}</div>
+      <div class="sum-sub">${txs.length}件</div>
+    </div>
+    <div class="sum-card orange">
+      <div class="sum-label">⚠️ 要確認</div>
+      <div class="sum-val orange">${needsReview.length}件</div>
+      <div class="sum-sub">自動分類済み：${autoClassified.length}件</div>
+    </div>
+  `;
+
+  // 要確認リスト
+  const reviewList = document.getElementById('review-list');
+  reviewList.innerHTML = '';
+  if (needsReview.length === 0) {
+    reviewList.innerHTML = '<div style="text-align:center;color:var(--mint);font-weight:800;padding:16px;">🎉 全件自動分類できました！</div>';
+  } else {
+    needsReview.forEach(t => {
+      reviewList.appendChild(makeTxItem(t, true));
+    });
+  }
+
+  // 全件リスト
+  const allList = document.getElementById('all-tx-list');
+  allList.innerHTML = '';
+  txs.forEach(t => allList.appendChild(makeTxItem(t, false)));
+}
+
+function makeTxItem(t, showSelect) {
+  const cat = getCat(t.category);
+  const div = document.createElement('div');
+  div.className = 'tx-item' + (t.needsReview ? ' needs-review' : '');
+  div.innerHTML = `
+    <div class="tx-icon" style="background:${cat.bg}">${cat.label.split(' ')[0]}</div>
+    <div class="tx-info">
+      <div class="tx-name">${t.name}${t.needsReview?'<span class="review-badge">要確認</span>':''}</div>
+      <div class="tx-date">${t.date}</div>
+      ${showSelect ? `<div class="tx-cat"><select class="cat-select" onchange="updateCategory('${t.date}','${t.name}',this.value)">
+        ${CATEGORIES.map(c=>`<option value="${c.id}" ${c.id===t.category?'selected':''}>${c.label}</option>`).join('')}
+      </select></div>` : `<div class="tx-date" style="margin-top:2px;">${cat.label}</div>`}
+    </div>
+    <div class="tx-amount">¥${t.amount.toLocaleString()}</div>
+  `;
+  return div;
+}
+
+function updateCategory(date, name, catId) {
+  const t = transactions.find(t => t.date===date && t.name===name);
+  if (t) { t.category = catId; t.needsReview = false; }
+}
+
+function toggleAllView() {
+  allShown = !allShown;
+  document.getElementById('all-list').style.display = allShown ? 'block' : 'none';
+  document.getElementById('all-toggle-btn').textContent = allShown ? '📋 全件を閉じる ▲' : '📋 全件を見る ▼';
+}
+
+// ── 集計・結果 ──
+function goToResult() {
+  showPage('page-result');
+  setStep(2);
+  renderResult();
+}
+
+function renderResult() {
+  const total = transactions.reduce((s,t)=>s+t.amount,0);
+  const byCategory = {};
+  transactions.forEach(t => {
+    if (!byCategory[t.category]) byCategory[t.category] = [];
+    byCategory[t.category].push(t);
+  });
+
+  // サマリー
+  const topCats = Object.entries(byCategory)
+    .sort((a,b)=>b[1].reduce((s,t)=>s+t.amount,0)-a[1].reduce((s,t)=>s+t.amount,0))
+    .slice(0,4);
+  const sumColors = ['peach','mint','orange','lav'];
+  const sumValColors = ['pink','green','orange','purple'];
+
+  document.getElementById('result-summary').innerHTML = `
+    <div class="sum-card peach">
+      <div class="sum-label">💳 今月の合計</div>
+      <div class="sum-val pink">¥${total.toLocaleString()}</div>
+      <div class="sum-sub">${transactions.length}件</div>
+    </div>
+    ${topCats.slice(0,3).map((([id,txs],i)=>{
+      const cat=getCat(id);
+      const amt=txs.reduce((s,t)=>s+t.amount,0);
+      return `<div class="sum-card ${sumColors[i+1]}">
+        <div class="sum-label">${cat.label}</div>
+        <div class="sum-val ${sumValColors[i+1]}">¥${amt.toLocaleString()}</div>
+        <div class="sum-sub">${txs.length}件</div>
+      </div>`;
+    })).join('')}
+  `;
+
+  // カテゴリ別内訳
+  const breakdown = document.getElementById('category-breakdown');
+  breakdown.innerHTML = '';
+  Object.entries(byCategory)
+    .sort((a,b)=>b[1].reduce((s,t)=>s+t.amount,0)-a[1].reduce((s,t)=>s+t.amount,0))
+    .forEach(([id, txs]) => {
+      const cat = getCat(id);
+      const amt = txs.reduce((s,t)=>s+t.amount,0);
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.style.marginBottom = '10px';
+      div.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:${cat.bg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${cat.label.split(' ')[0]}</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:800;">${cat.label}</div>
+            <div style="font-size:11px;color:var(--text2);font-weight:600;">${txs.length}件</div>
+          </div>
+          <div style="font-size:17px;font-weight:900;color:${cat.color};">¥${amt.toLocaleString()}</div>
+        </div>
+        ${txs.map(t=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid var(--border);color:var(--text2);">
+          <span style="font-weight:600;">${t.date.slice(5)} ${t.name}</span>
+          <span style="font-weight:800;color:var(--text);">¥${t.amount.toLocaleString()}</span>
+        </div>`).join('')}
+      `;
+      breakdown.appendChild(div);
+    });
+
+  // Notionテキスト生成
+  const now = new Date();
+  const monthStr = `${now.getFullYear()}年${now.getMonth()+1}月`;
+  let notionText = `## 💳 カード明細 ${monthStr}\n\n`;
+  notionText += `**合計：¥${total.toLocaleString()}**（${transactions.length}件）\n\n`;
+  notionText += `### カテゴリ別集計\n\n`;
+  Object.entries(byCategory)
+    .sort((a,b)=>b[1].reduce((s,t)=>s+t.amount,0)-a[1].reduce((s,t)=>s+t.amount,0))
+    .forEach(([id,txs]) => {
+      const cat = getCat(id);
+      const amt = txs.reduce((s,t)=>s+t.amount,0);
+      notionText += `${cat.label}：¥${amt.toLocaleString()}（${txs.length}件）\n`;
+    });
+  notionText += `\n### 明細一覧\n\n`;
+  transactions.forEach(t => {
+    const cat = getCat(t.category);
+    notionText += `${t.date} | ${t.name} | ¥${t.amount.toLocaleString()} | ${cat.label}\n`;
+  });
+
+  document.getElementById('notion-preview').textContent = notionText;
+}
+
+async function copyNotion() {
+  const text = document.getElementById('notion-preview').textContent;
+  await navigator.clipboard.writeText(text);
+  const btn = event.target;
+  btn.textContent = '✅ コピーしました！';
+  setTimeout(() => btn.textContent = '📋 テキストをコピー', 2000);
+}
+
+async function postToNotion() {
+  const pageId = document.getElementById('notion-page-id').value.trim();
+  if (!pageId) { alert('NotionページIDを入力してください'); return; }
+
+  const btn = document.getElementById('post-btn');
+  btn.disabled = true; btn.textContent = '投稿中...';
+
+  const now = new Date();
+  const monthStr = `${now.getFullYear()}年${now.getMonth()+1}月`;
+  const total = transactions.reduce((s,t)=>s+t.amount,0);
+  const byCategory = {};
+  transactions.forEach(t => {
+    if (!byCategory[t.category]) byCategory[t.category] = [];
+    byCategory[t.category].push(t);
+  });
+
+  // Notion API経由でページ更新
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        mcp_servers: [{ type: 'url', url: 'https://mcp.notion.com/mcp', name: 'notion' }],
+        messages: [{
+          role: 'user',
+          content: `NotionページID「${pageId}」に以下の明細データを追加してください。
+
+## 💳 カード明細 ${monthStr}
+合計：¥${total.toLocaleString()}（${transactions.length}件）
+
+### カテゴリ別集計
+${Object.entries(byCategory).sort((a,b)=>b[1].reduce((s,t)=>s+t.amount,0)-a[1].reduce((s,t)=>s+t.amount,0)).map(([id,txs])=>{
+  const cat=getCat(id);const amt=txs.reduce((s,t)=>s+t.amount,0);
+  return `${cat.label}：¥${amt.toLocaleString()}（${txs.length}件）`;
+}).join('\n')}
+
+### 明細一覧
+${transactions.map(t=>`${t.date} | ${t.name} | ¥${t.amount.toLocaleString()} | ${getCat(t.category).label}`).join('\n')}
+
+ページの末尾に追記してください。`
+        }]
+      })
+    });
+    const data = await res.json();
+    document.getElementById('post-result').innerHTML = `<div style="color:var(--mint);font-weight:800;font-size:13px;padding:8px 0;">✅ Notionに投稿しました！</div>`;
+  } catch(e) {
+    document.getElementById('post-result').innerHTML = `<div style="color:var(--peach);font-weight:800;font-size:13px;padding:8px 0;">❌ 投稿失敗。テキストコピーをお試しください。</div>`;
+  }
+  btn.disabled = false; btn.textContent = '🚀 投稿';
+}
+
+function restart() {
+  transactions = [];
+  document.getElementById('csv-input').value = '';
+  showPage('page-upload');
+  setStep(0);
+}
+</script>
+</body>
+</html>
